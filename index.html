@@ -373,6 +373,13 @@ const __minuteur = setInterval(()=>{
     const nom = $("#i-nom").value.trim(), tel = $("#i-tel").value.trim();
     const roleEl = $("#i-role");
     const role = roleEl ? roleEl.value : "passager";
+    if(role === "proprietaire") {
+      const pwd = prompt("Veuillez entrer le mot de passe SuperAdmin :");
+      if(pwd !== "SENGO2026") {
+        toast("Mot de passe incorrect");
+        return;
+      }
+    }
     if(!nom){ toast("Indiquez votre nom"); return; }
     identite = {nom, tel, role};
     saveLocal("sengo_identite", identite); $("#identOverlay").hidden = true; toast("🎉 Compte " + role + " ouvert avec succès !"); appliquerRole(); if(typeof trajetsChanged === "function") trajetsChanged();
@@ -552,6 +559,25 @@ const __minuteur = setInterval(()=>{
   $("#copyBtn").addEventListener("click", async ()=>{
     try{ await navigator.clipboard.writeText($("#msg").textContent); toast("Message copié"); }catch(e){}
   });
+
+  
+  window.gererPassager = async function(trajetId, passagerId, action) {
+    const t = trajets.find(x=>x.id===trajetId);
+    if(!t) return;
+    const p = t.passagers.find(x=>x.id===passagerId);
+    if(!p) return;
+    p.statut = action;
+    if(action === "refuse") {
+        t.reservees = Math.max(0, (t.reservees||0) - p.places); // Libérer les places
+    }
+    if(firebaseOK){
+      await db.collection(COL).doc(trajetId).update({reservees:t.reservees, passagers:t.passagers});
+    }else{
+      persist();
+    }
+    trajetsChanged();
+    toast(action === "confirme" ? "Réservation acceptée et paiement confirmé" : "Réservation refusée");
+  };
 
   function renderMesTrajets(){
     const mesRefs = identite ? trajets.filter(t=>t.chauffeur===identite.nom) : trajets;
