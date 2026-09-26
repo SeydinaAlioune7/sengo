@@ -402,13 +402,15 @@ const __minuteur = setInterval(()=>{
   window.getGPS = function(btn) {
     const input = btn.previousElementSibling;
     input.placeholder = "Recherche GPS...";
+    if(!navigator.geolocation) { toast("GPS non supporté"); return; }
     navigator.geolocation.getCurrentPosition(async pos => {
       try {
-        const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${pos.coords.latitude}&lon=${pos.coords.longitude}`);
+        const url = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${pos.coords.latitude}&lon=${pos.coords.longitude}&accept-language=fr`;
+        const res = await fetch(url);
         const data = await res.json();
-        input.value = data.address.city || data.address.town || data.address.village || data.address.county || "";
-      } catch(e) { toast("Erreur GPS"); }
-    }, () => toast("GPS refusé"));
+        input.value = data.address.city || data.address.town || data.address.village || data.address.county || data.address.state || "Inconnu";
+      } catch(e) { toast("Erreur réseau GPS"); }
+    }, (err) => { toast("Erreur GPS : " + err.message); }, {enableHighAccuracy: true, timeout: 10000});
   };
 
   // ---------- source de donnees : Firestore si configure, sinon localStorage ----------
@@ -585,6 +587,15 @@ const __minuteur = setInterval(()=>{
   });
 
   
+  
+  window.supprimerTrajetAdmin = async function(id) {
+    if(confirm("Êtes-vous sûr de vouloir supprimer cette offre du réseau ?")) {
+        if(firebaseOK) await db.collection(COL).doc(id).delete();
+        else { trajets = trajets.filter(t=>t.id!==id); persist(); trajetsChanged(); }
+        toast("Offre supprimée avec succès.");
+    }
+  };
+
   window.gererPassager = async function(trajetId, passagerId, action) {
     const t = trajets.find(x=>x.id===trajetId);
     if(!t) return;
@@ -609,12 +620,31 @@ const __minuteur = setInterval(()=>{
     const ca = trajets.reduce((sum, t) => sum + (t.passagers||[]).filter(p=>p.statut==="confirme").reduce((s,p)=>s+(Number(p.total)||0), 0), 0);
     const comm = trajets.reduce((sum, t) => sum + (t.passagers||[]).filter(p=>p.statut==="confirme").reduce((s,p)=>s+(Number(p.commission)||0), 0), 0);
     const totalUsers = new Set(trajets.map(t=>t.chauffeur).concat(trajets.flatMap(t=>(t.passagers||[]).map(p=>p.nom)))).size;
+    
+    const tripsHtml = trajets.map(t => `
+        <div style="background:var(--card); border:1px solid var(--line); padding:15px; border-radius:12px; margin-bottom:12px; display:flex; justify-content:space-between; align-items:center;">
+            <div>
+              <b style="font-size:1.1rem">${esc(t.depart)} ➡️ ${esc(t.arrivee)}</b><br>
+              👤 Chauffeur: <b>${esc(t.chauffeur)}</b> (${esc(t.phone)})<br>
+              💰 Prix: ${fmt(t.prix, t.devise)} | 💺 Places: ${t.places}<br>
+              📅 Date: ${t.date || "N/A"}
+            </div>
+            <div>
+                <button class="btn small" style="background:var(--red)" onclick="supprimerTrajetAdmin('${t.id}')">🗑️ Bloquer/Supprimer</button>
+            </div>
+        </div>
+    `).join("");
     $("#adminStats").innerHTML = `
-      <div class="stat"><b>${trajets.length}</b><span>Trajets publiés</span></div>
-      <div class="stat"><b>${totalUsers}</b><span>Utilisateurs actifs</span></div>
-      <div class="stat"><b>${fmt(ca, "CFA")}</b><span>Volume d'affaires validé</span></div>
-      <div class="stat" style="background:var(--green);color:white;"><b>${fmt(comm, "CFA")}</b><span style="color:white;">Gains SenGo (10%)</span></div>
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:30px;">
+        <div class="stat"><b>${trajets.length}</b><span>Trajets publiés</span></div>
+        <div class="stat"><b>${totalUsers}</b><span>Utilisateurs actifs</span></div>
+        <div class="stat"><b>${fmt(ca, "CFA")}</b><span>Volume d'affaires validé</span></div>
+        <div class="stat" style="background:var(--green);color:white;"><b>${fmt(comm, "CFA")}</b><span style="color:white;">Gains SenGo (10%)</span></div>
+      </div>
+      <h3 style="margin-bottom:15px; padding-bottom:10px; border-bottom:2px solid var(--ink)">📋 Toutes les offres en cours</h3>
+      ${tripsHtml || '<p>Aucune offre sur le réseau.</p>'}
     `;
+
   }
 
   function renderMesTrajets(){
