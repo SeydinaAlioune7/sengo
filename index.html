@@ -291,6 +291,35 @@ tr:hover td{background:var(--pink-soft)}
 <!-- ============ FIREBASE (chargement standard, robuste en file://) ============ -->
 <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js" defer></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore-compat.js" defer></script>
+
+  <!-- ================= MODAL PAIEMENT ================= -->
+  <div id="payOverlay" class="overlay" hidden>
+    <div class="modal" style="text-align:center; max-width:350px;">
+      <h2 style="margin-top:0;">Paiement Sécurisé</h2>
+      <p style="color:var(--ink2); font-size:0.9rem;">Réservation de <b id="payPlaces"></b> place(s)</p>
+      <div style="font-size:2rem; font-weight:800; margin:15px 0; color:var(--ink);" id="payMontant"></div>
+      
+      <p style="font-size:0.85rem; color:var(--ink2); margin-bottom:10px;">Veuillez envoyer l'argent au <b>compte central SenGo</b> pour bloquer votre place (Le chauffeur sera payé par l'Admin).</p>
+      
+      <div style="background: white; padding: 10px; border-radius: 10px; display: inline-block; margin-bottom: 15px; border: 2px solid var(--pink);">
+        <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=WavePaymentSenGoAdmin" alt="QR Code Wave Admin" width="120" height="120">
+        <div style="font-weight:bold; color:var(--ink); margin-top:5px; font-size:1.1rem;">📞 77 000 00 00</div>
+      </div>
+      
+      <div style="display:flex; flex-direction:column; gap:10px;">
+        <button id="btnWave" class="btn" style="background:#1CBBFE; color:white; font-size:1.1rem; padding:12px; display:flex; align-items:center; justify-content:center; gap:10px;">
+          <b style="font-size:1.4rem;">🌊</b> Paiement Envoyé
+        </button>
+      </div>
+
+      <div id="payLoader" style="margin-top:20px; font-weight:bold; color:var(--green); display:none;">
+        Vérification du paiement... 🔄
+      </div>
+      
+      <button class="btn ghost small" style="margin-top:15px; width:100%;" onclick="annulerPaiement()">Annuler</button>
+    </div>
+  </div>
+
 <script>
 window.__firebaseReady = false;
 window.__firebaseFailed = false;
@@ -326,6 +355,35 @@ const __minuteur = setInterval(()=>{
   }
 }, 200);
 </script>
+
+
+  <!-- ================= MODAL PAIEMENT ================= -->
+  <div id="payOverlay" class="overlay" hidden>
+    <div class="modal" style="text-align:center; max-width:350px;">
+      <h2 style="margin-top:0;">Paiement Sécurisé</h2>
+      <p style="color:var(--ink2); font-size:0.9rem;">Réservation de <b id="payPlaces"></b> place(s)</p>
+      <div style="font-size:2rem; font-weight:800; margin:15px 0; color:var(--ink);" id="payMontant"></div>
+      
+      <p style="font-size:0.85rem; color:var(--ink2); margin-bottom:10px;">Veuillez envoyer l'argent au <b>compte central SenGo</b> pour bloquer votre place (Le chauffeur sera payé par l'Admin).</p>
+      
+      <div style="background: white; padding: 10px; border-radius: 10px; display: inline-block; margin-bottom: 15px; border: 2px solid var(--pink);">
+        <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=WavePaymentSenGoAdmin" alt="QR Code Wave Admin" width="120" height="120">
+        <div style="font-weight:bold; color:var(--ink); margin-top:5px; font-size:1.1rem;">📞 77 000 00 00</div>
+      </div>
+      
+      <div style="display:flex; flex-direction:column; gap:10px;">
+        <button id="btnWave" class="btn" style="background:#1CBBFE; color:white; font-size:1.1rem; padding:12px; display:flex; align-items:center; justify-content:center; gap:10px;">
+          <b style="font-size:1.4rem;">🌊</b> Paiement Envoyé
+        </button>
+      </div>
+
+      <div id="payLoader" style="margin-top:20px; font-weight:bold; color:var(--green); display:none;">
+        Vérification du paiement... 🔄
+      </div>
+      
+      <button class="btn ghost small" style="margin-top:15px; width:100%;" onclick="annulerPaiement()">Annuler</button>
+    </div>
+  </div>
 
 <script>
 (function(){
