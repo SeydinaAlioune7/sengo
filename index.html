@@ -702,7 +702,15 @@ const __minuteur = setInterval(()=>{
     const id = card.dataset.id;
     const nb = Number(card.querySelector(".nbPlacesInput").value)||1;
     try{
+      
+      const tr = trajets.find(x=>x.id===id);
+      const prx = Number(tr.prix)||0;
+      const cmm = Math.round(prx * 0.10);
+      const tot = (prx + cmm) * nb;
+      const payeMsg = "Pour valider votre place, vous allez devoir payer " + fmt(tot, tr.devise) + ".\n\nCliquez sur OK, puis utilisez Wave ou Orange Money pour envoyer l'argent au chauffeur (" + (tr.phone||"") + ").";
+      if(!confirm(payeMsg)) return;
       await reserverPlace(id, nb, {nom:identite.nom, tel:identite.tel});
+
       toast("Réservation confirmée !");
       const t = trajets.find(x=>x.id===id);
       if(t) ouvrirRecu(t, nb);
