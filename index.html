@@ -165,7 +165,8 @@ tr:hover td{background:var(--pink-soft)}
       </svg>
       <div><h1>SenGo Covoiturage</h1><p class="sub">Trajets partagés au Sénégal</p></div>
     </div>
-    <div id="google_translate_element" style="margin-left:auto;margin-right:15px;"></div>
+    <button id="btnLogout" style="margin-left:auto;margin-right:15px;background:none;border:none;color:var(--pink);cursor:pointer;font-weight:bold;font-size:0.9rem;">🚪 Se déconnecter</button>
+      <div id="google_translate_element" style="margin-right:15px;"></div>
     <span id="syncBadge" class="off">● hors ligne</span>
   </header>
 
@@ -374,7 +375,7 @@ const __minuteur = setInterval(()=>{
     const role = roleEl ? roleEl.value : "passager";
     if(!nom){ toast("Indiquez votre nom"); return; }
     identite = {nom, tel, role};
-    saveLocal("sengo_identite", identite); $("#identOverlay").hidden = true; appliquerRole(); if(typeof trajetsChanged === "function") trajetsChanged();
+    saveLocal("sengo_identite", identite); $("#identOverlay").hidden = true; toast("🎉 Compte " + role + " ouvert avec succès !"); appliquerRole(); if(typeof trajetsChanged === "function") trajetsChanged();
   });
 
   ouvrirIdent();
@@ -454,6 +455,18 @@ const __minuteur = setInterval(()=>{
       t.passagers = t.passagers||[]; t.passagers.push(Object.assign({nb:nbPlaces, date:new Date().toISOString()}, passagerInfo));
       persist(); trajetsChanged();
     }
+  }
+
+
+  // Logout function
+  const btnLogout = $("#btnLogout");
+  if(btnLogout) {
+    btnLogout.addEventListener("click", ()=>{
+      if(confirm("Voulez-vous vraiment vous déconnecter ?")){
+        localStorage.removeItem("sengo_identite");
+        location.reload();
+      }
+    });
   }
 
   // ---------- bascule de role ----------
