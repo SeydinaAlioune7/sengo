@@ -173,6 +173,7 @@ tr:hover td{background:var(--pink-soft)}
   <div id="roleSwitch">
     <button data-role="chauffeur" class="active">🚗 Espace Chauffeur</button>
     <button data-role="passager">🧍 Espace Passager</button>
+      <button data-role="admin" id="tabAdminBtn" style="display:none">👑 Admin</button>
   </div>
 
   <!-- ================= VUE CHAUFFEUR ================= -->
@@ -188,8 +189,8 @@ tr:hover td{background:var(--pink-soft)}
         <form class="panel" id="form" autocomplete="off">
           <h2 id="formTitle">Publier un trajet</h2>
           <div class="row">
-            <div><label for="f-depart">Ville de départ</label><input id="f-depart" list="villes" value="Dakar"></div>
-            <div><label for="f-arrivee">Ville d'arrivée</label><input id="f-arrivee" list="villes" placeholder="Thiès"></div>
+            <div><label for="f-depart">Ville de départ</label><div style="display:flex;align-items:center;gap:5px;"><input id="f-depart" list="villes" value="Dakar"><button type="button" class="btn small ghost" onclick="getGPS(this)" style="padding:0 5px;" title="Me localiser">📍</button></div></div>
+            <div><label for="f-arrivee">Ville d'arrivée</label><div style="display:flex;align-items:center;gap:5px;"><input id="f-arrivee" list="villes" placeholder="Thiès"><button type="button" class="btn small ghost" onclick="getGPS(this)" style="padding:0 5px;" title="Me localiser">📍</button></div></div>
           </div>
           <datalist id="villes"></datalist>
           <div class="row">
@@ -254,11 +255,18 @@ tr:hover td{background:var(--pink-soft)}
     </section>
   </div>
 
+  
+  <!-- ================= VUE ADMIN ================= -->
+  <div class="view" id="view-admin" hidden>
+    <div class="toolbar" style="margin-top:20px"><h2 style="margin:0;">Tour de Contrôle SuperAdmin</h2></div>
+    <div class="stats" id="adminStats" style="margin-top:20px;"></div>
+  </div>
+
   <!-- ================= VUE PASSAGER ================= -->
   <div class="view" id="view-passager" hidden>
     <div class="toolbar" style="margin-top:20px">
-      <input id="p-depart" list="villes" placeholder="Ville de départ">
-      <input id="p-arrivee" list="villes" placeholder="Ville d'arrivée">
+      <div style="display:flex;align-items:center;gap:5px;"><input id="p-depart" list="villes" placeholder="Ville de départ"><button type="button" class="btn small ghost" onclick="getGPS(this)" style="padding:0 5px;" title="Me localiser">📍</button></div>
+      <div style="display:flex;align-items:center;gap:5px;"><input id="p-arrivee" list="villes" placeholder="Ville d'arrivée"><button type="button" class="btn small ghost" onclick="getGPS(this)" style="padding:0 5px;" title="Me localiser">📍</button></div>
       <input id="p-date" type="date">
       <button class="btn pink small" id="p-rechercher">Rechercher</button>
       <button class="btn ghost small" id="p-reset">Réinitialiser</button>
@@ -363,6 +371,8 @@ const __minuteur = setInterval(()=>{
     } else {
        btnC.style.display = "inline-block";
        btnP.style.display = "inline-block";
+       const btnA = document.getElementById("tabAdminBtn");
+       if(btnA) { btnA.style.display = "inline-block"; btnA.click(); }
     }
   }
 
@@ -383,10 +393,23 @@ const __minuteur = setInterval(()=>{
     }
     if(!nom){ toast("Indiquez votre nom"); return; }
     identite = {nom, tel, role};
-    saveLocal("sengo_identite", identite); $("#identOverlay").hidden = true; toast("🎉 Compte " + role + " ouvert avec succès !"); appliquerRole(); if(typeof trajetsChanged === "function") trajetsChanged();
+    saveLocal("sengo_identite", identite); $("#identOverlay").hidden = true; toast("🎉 Compte " + role + " ouvert avec succès !"); if(window.Notification && Notification.permission !== "granted" && Notification.permission !== "denied") Notification.requestPermission(); appliquerRole(); if(typeof trajetsChanged === "function") trajetsChanged();
   });
 
   ouvrirIdent();
+
+  
+  window.getGPS = function(btn) {
+    const input = btn.previousElementSibling;
+    input.placeholder = "Recherche GPS...";
+    navigator.geolocation.getCurrentPosition(async pos => {
+      try {
+        const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${pos.coords.latitude}&lon=${pos.coords.longitude}`);
+        const data = await res.json();
+        input.value = data.address.city || data.address.town || data.address.village || data.address.county || "";
+      } catch(e) { toast("Erreur GPS"); }
+    }, () => toast("GPS refusé"));
+  };
 
   // ---------- source de donnees : Firestore si configure, sinon localStorage ----------
   let trajets = [];
@@ -394,7 +417,7 @@ const __minuteur = setInterval(()=>{
   let db = null, firebaseOK = false;
 
   function trajetsChanged(){
-    renderMesTrajets(); renderStats(); renderRecherchePassager();
+    renderMesTrajets(); renderStats(); renderRecherchePassager(); renderAdmin();
   }
   function demarrerDonnees(){
     if(firebaseOK){
@@ -482,7 +505,7 @@ const __minuteur = setInterval(()=>{
     $$("#roleSwitch button").forEach(x=>x.classList.remove("active"));
     b.classList.add("active");
     const role = b.dataset.role;
-    $("#view-chauffeur").hidden = role!=="chauffeur";
+    $("#view-chauffeur").hidden = role!=="chauffeur"; $("#view-admin").hidden = role!=="admin";
     $("#view-passager").hidden = role!=="passager";
     if(role==="passager") renderRecherchePassager();
   }));
@@ -579,6 +602,20 @@ const __minuteur = setInterval(()=>{
     trajetsChanged();
     toast(action === "confirme" ? "Réservation acceptée et paiement confirmé" : "Réservation refusée");
   };
+
+  
+  function renderAdmin() {
+    if(!$("#view-admin") || !identite || identite.role !== "proprietaire") return;
+    const ca = trajets.reduce((sum, t) => sum + (t.passagers||[]).filter(p=>p.statut==="confirme").reduce((s,p)=>s+(Number(p.total)||0), 0), 0);
+    const comm = trajets.reduce((sum, t) => sum + (t.passagers||[]).filter(p=>p.statut==="confirme").reduce((s,p)=>s+(Number(p.commission)||0), 0), 0);
+    const totalUsers = new Set(trajets.map(t=>t.chauffeur).concat(trajets.flatMap(t=>(t.passagers||[]).map(p=>p.nom)))).size;
+    $("#adminStats").innerHTML = `
+      <div class="stat"><b>${trajets.length}</b><span>Trajets publiés</span></div>
+      <div class="stat"><b>${totalUsers}</b><span>Utilisateurs actifs</span></div>
+      <div class="stat"><b>${fmt(ca, "CFA")}</b><span>Volume d'affaires validé</span></div>
+      <div class="stat" style="background:var(--green);color:white;"><b>${fmt(comm, "CFA")}</b><span style="color:white;">Gains SenGo (10%)</span></div>
+    `;
+  }
 
   function renderMesTrajets(){
     const mesRefs = identite ? trajets.filter(t=>t.chauffeur===identite.nom) : trajets;
@@ -686,7 +723,9 @@ const __minuteur = setInterval(()=>{
       '<b>Date :</b> '+dateTrajet+(t.heure?' à '+t.heure:'')+'<br>'+
       '<b>Chauffeur :</b> '+esc(t.chauffeur)+(t.phone?' · '+esc(t.phone):'')+'<br>'+
       '<b>Places réservées :</b> '+nb+'<br>'+
-      '<b>Total :</b> '+fmt(total, t.devise)+'</p>'+
+      '<b>Prix (Chauffeur) :</b> '+fmt((Number(t.prix)||0)*nb, t.devise)+'<br>'+
+      '<b>Frais SenGo :</b> '+fmt(Math.round((Number(t.prix)||0)*0.10)*nb, t.devise)+'<br>'+
+      '<b>Total à payer :</b> '+fmt(((Number(t.prix)||0) + Math.round((Number(t.prix)||0)*0.10))*nb, t.devise)+'</p>'+
       '<span class="facture-statut">Réservation enregistrée</span></div>';
     $("#factureOverlay").hidden = false;
     const texteWa = "🧾 Réservation confirmée - "+t.ref+"\nTrajet : "+t.depart+" → "+t.arrivee+"\nPlaces : "+nb+"\nTotal : "+fmt(total, t.devise);
