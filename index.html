@@ -135,6 +135,14 @@ tr:hover td{background:var(--pink-soft)}
 #syncBadge.ok{background:var(--green-soft);color:var(--green)}
 #syncBadge.off{background:var(--amber-soft);color:var(--amber)}
 </style>
+
+  <script type="text/javascript">
+    function googleTranslateElementInit() {
+      new google.translate.TranslateElement({pageLanguage: 'fr', layout: google.translate.TranslateElement.InlineLayout.SIMPLE}, 'google_translate_element');
+    }
+  </script>
+  <script type="text/javascript" src="https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
+
 </head>
 <body>
 
@@ -157,6 +165,7 @@ tr:hover td{background:var(--pink-soft)}
       </svg>
       <div><h1>SenGo Covoiturage</h1><p class="sub">Trajets partagés au Sénégal</p></div>
     </div>
+    <div id="google_translate_element" style="margin-left:auto;margin-right:15px;"></div>
     <span id="syncBadge" class="off">● hors ligne</span>
   </header>
 
@@ -188,7 +197,7 @@ tr:hover td{background:var(--pink-soft)}
           </div>
           <div class="row3">
             <div><label for="f-places">Places disponibles</label><input id="f-places" type="number" min="1" step="1" value="3"></div>
-            <div><label for="f-prix">Prix par place (FCFA)</label><input id="f-prix" type="number" min="0" step="500" placeholder="3000"></div>
+            <div style="display:flex; gap:10px;"><div style="flex:1"><label for="f-prix">Prix/place</label><input id="f-prix" type="number" min="0" placeholder="3000"></div><div style="width:80px"><label for="f-devise">Devise</label><select id="f-devise"><option value="FCFA">CFA</option><option value="€">EUR</option><option value="$">USD</option></select></div></div>
             <div><label for="f-vehicule">Véhicule</label><input id="f-vehicule" placeholder="Berline, 7 places…"></div>
           </div>
           <label for="f-notes">Note pour les passagers</label>
@@ -320,7 +329,7 @@ const __minuteur = setInterval(()=>{
   function saveLocal(key, val){ try{ localStorage.setItem(key, JSON.stringify(val)); }catch(e){} }
   function toast(t){ const el=$("#toast"); el.textContent=t; el.classList.add("show"); clearTimeout(toast._t); toast._t=setTimeout(()=>el.classList.remove("show"),2200); }
   const esc = s => String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
-  const fmt = n => (n===""||n==null||isNaN(n)) ? "-" : Number(n).toLocaleString("fr-FR")+" FCFA";
+  const fmt = (n, d="FCFA") => (n===""||n==null||isNaN(n)) ? "-" : Number(n).toLocaleString("fr-FR")+" "+d;
   function normPhone(raw){
     let d = (raw||"").replace(/[^\d+]/g,"");
     if(d.startsWith("+")) return d.slice(1);
@@ -479,7 +488,7 @@ const __minuteur = setInterval(()=>{
     const ligneTrajet = "🚗 Trajet : "+(t.depart||"-")+" → "+(t.arrivee||"-");
     const ligneDate = "📅 "+dateAff+(t.date && t.heure?" à "+t.heure:"");
     const lignePlaces = "💺 Places disponibles : "+placesLibres(t)+"/"+(t.places||"-");
-    const lignePrix = t.prix ? "💰 Prix : "+fmt(t.prix)+" par place" : null;
+    const lignePrix = t.prix ? "💰 Prix : "+fmt(t.prix, t.devise)+" par place" : null;
     const ligneVehicule = t.vehicule ? "🚘 Véhicule : "+t.vehicule+(t.clim?" (climatisé)":"") : null;
     const ligneNotes = t.notes ? "ℹ️ "+t.notes : null;
     const ref2 = "📋 Référence : *"+ref+"*";
@@ -495,7 +504,7 @@ const __minuteur = setInterval(()=>{
     $("#tRef").textContent = ref;
     $("#tRoute").textContent = (t.depart||"…")+" → "+(t.arrivee||"…");
     $("#tPlaces").textContent = t.places||"-";
-    $("#tPrix").textContent = t.prix ? fmt(t.prix) : "-";
+    $("#tPrix").textContent = t.prix ? fmt(t.prix, t.devise) : "-";
     const text = buildMessage(t, ref);
     $("#msg").textContent = text;
     $("#waBtn").href = "https://wa.me/"+(normPhone(t.phone)||"")+"?text="+encodeURIComponent(text);
@@ -549,7 +558,7 @@ const __minuteur = setInterval(()=>{
         '<td>'+esc(t.depart)+' → '+esc(t.arrivee)+'</td>'+
         '<td>'+(t.date?new Date(t.date).toLocaleDateString("fr-FR"):"-")+'</td>'+
         '<td>'+libres+'/'+t.places+'</td>'+
-        '<td>'+fmt(t.prix)+'</td>'+
+        '<td>'+fmt(t.prix, t.devise)+'</td>'+
         '<td><span class="chip s-'+st+'">'+STATUTS[st]+'</span></td>'+
         '<td style="white-space:nowrap"><button class="btn small ghost" data-act="del">✕</button></td>'+
       '</tr>';
@@ -574,7 +583,7 @@ const __minuteur = setInterval(()=>{
       ['<b>'+mesTrajets.length+'</b><span>trajets publiés</span>',''],
       ['<b>'+totalRes+'/'+totalPlaces+'</b><span>places réservées</span>',''],
       ['<b>'+taux+' %</b><span>taux de remplissage</span>', taux<40?'alert':''],
-      ['<b>'+fmt(revenu)+'</b><span>revenu généré</span>','']
+      ['<b>'+fmt(revenu, "MIX")+'</b><span>revenu généré</span>','']
     ].map(([h,c])=>'<div class="stat '+c+'">'+h+'</div>').join("");
   }
 
@@ -596,8 +605,8 @@ const __minuteur = setInterval(()=>{
       const libres = placesLibres(t), pct = t.places>0 ? Math.round((t.reservees||0)/t.places*100) : 0;
       return '<div class="trajetCard" data-id="'+t.id+'">'+
         '<div class="top"><div><div class="route">'+esc(t.depart)+' → '+esc(t.arrivee)+'</div>'+
-        '<div class="meta">'+(t.date?new Date(t.date).toLocaleDateString("fr-FR")+(t.heure?' à '+t.heure:''):"Date à confirmer")+' · Chauffeur : '+esc(t.chauffeur)+(t.vehicule?' · '+esc(t.vehicule):'')+'</div></div>'+
-        '<div class="prix">'+fmt(t.prix)+'</div></div>'+
+        '<div class="meta">'+(t.date?new Date(t.date).toLocaleDateString("fr-FR")+(t.heure?' à '+t.heure:''):"Date à confirmer")+' · Chauffeur : \'+esc(t.chauffeur)+\' <span style="color:#f39c12;font-weight:bold">⭐ 4.8</span>\'+(t.vehicule?\' · '+esc(t.vehicule):'')+'</div></div>'+
+        '<div class="prix">'+fmt(t.prix, t.devise)+'</div></div>'+
         '<div class="places"><div class="barre"><span style="width:'+pct+'%"></span></div>'+libres+' place'+(libres>1?'s':'')+' disponible'+(libres>1?'s':'')+'</div>'+
         (t.notes?'<p class="hint" style="margin-top:8px">'+esc(t.notes)+'</p>':'')+
         '<div class="actions">'+
@@ -637,10 +646,10 @@ const __minuteur = setInterval(()=>{
       '<b>Date :</b> '+dateTrajet+(t.heure?' à '+t.heure:'')+'<br>'+
       '<b>Chauffeur :</b> '+esc(t.chauffeur)+(t.phone?' · '+esc(t.phone):'')+'<br>'+
       '<b>Places réservées :</b> '+nb+'<br>'+
-      '<b>Total :</b> '+fmt(total)+'</p>'+
+      '<b>Total :</b> '+fmt(total, t.devise)+'</p>'+
       '<span class="facture-statut">Réservation enregistrée</span></div>';
     $("#factureOverlay").hidden = false;
-    const texteWa = "🧾 Réservation confirmée - "+t.ref+"\nTrajet : "+t.depart+" → "+t.arrivee+"\nPlaces : "+nb+"\nTotal : "+fmt(total);
+    const texteWa = "🧾 Réservation confirmée - "+t.ref+"\nTrajet : "+t.depart+" → "+t.arrivee+"\nPlaces : "+nb+"\nTotal : "+fmt(total, t.devise);
     $("#factureWa").href = "https://wa.me/"+(normPhone(t.phone)||"")+"?text="+encodeURIComponent(texteWa);
   }
   $("#factureFermer").addEventListener("click", ()=>{ $("#factureOverlay").hidden = true; });
