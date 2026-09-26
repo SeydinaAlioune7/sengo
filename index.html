@@ -605,7 +605,7 @@ const __minuteur = setInterval(()=>{
       const libres = placesLibres(t), pct = t.places>0 ? Math.round((t.reservees||0)/t.places*100) : 0;
       return '<div class="trajetCard" data-id="'+t.id+'">'+
         '<div class="top"><div><div class="route">'+esc(t.depart)+' → '+esc(t.arrivee)+'</div>'+
-        '<div class="meta">'+(t.date?new Date(t.date).toLocaleDateString("fr-FR")+(t.heure?' à '+t.heure:''):"Date à confirmer")+' · Chauffeur : \'+esc(t.chauffeur)+\' <span style="color:#f39c12;font-weight:bold">⭐ 4.8</span>\'+(t.vehicule?\' · '+esc(t.vehicule):'')+'</div></div>'+
+        '<div class="meta">'+(t.date?new Date(t.date).toLocaleDateString("fr-FR")+(t.heure?' à '+t.heure:''):"Date à confirmer")+' · Chauffeur : ' + esc(t.chauffeur) + ' <span style="color:#f39c12;font-weight:bold">⭐ 4.8</span>' + (t.vehicule ? ' · '+esc(t.vehicule):'')+'</div></div>'+
         '<div class="prix">'+fmt(t.prix, t.devise)+'</div></div>'+
         '<div class="places"><div class="barre"><span style="width:'+pct+'%"></span></div>'+libres+' place'+(libres>1?'s':'')+' disponible'+(libres>1?'s':'')+'</div>'+
         (t.notes?'<p class="hint" style="margin-top:8px">'+esc(t.notes)+'</p>':'')+
