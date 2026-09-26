@@ -144,7 +144,7 @@ tr:hover td{background:var(--pink-soft)}
     <p class="hint">Entrez votre nom et votre numéro pour continuer. C'est ce qui identifie vos trajets ou vos réservations.</p>
     <label for="i-nom">Votre nom</label><input id="i-nom" placeholder="Fatou Sarr">
     <label for="i-tel">Votre téléphone (WhatsApp)</label><input id="i-tel" inputmode="tel" placeholder="77 123 45 67">
-    <div class="actions"><button class="btn pink" id="identValider" style="width:100%">Continuer</button></div>
+    <label for="i-role">Je suis :</label><select id="i-role" style="margin-bottom:12px;width:100%;padding:10px;border-radius:9px;border:1.5px solid var(--line);"><option value="passager">Passager (Client)</option><option value="chauffeur">Chauffeur</option><option value="proprietaire">Propriétaire (Admin)</option></select><div class="actions"><button class="btn pink" id="identValider" style="width:100%">Continuer</button></div>
   </div>
 </div>
 
@@ -334,16 +334,40 @@ const __minuteur = setInterval(()=>{
 
   // ---------- identite (chauffeur ou passager, la meme personne peut etre les deux) ----------
   let identite = loadLocal("sengo_identite", null);
+
+  function appliquerRole(){
+    if(!identite) return;
+    const r = identite.role || "passager";
+    const btnC = document.querySelector("#roleSwitch button[data-role='chauffeur']");
+    const btnP = document.querySelector("#roleSwitch button[data-role='passager']");
+    if(!btnC || !btnP) return;
+    if(r === "passager"){
+       btnC.style.display = "none";
+       btnP.style.display = "inline-block";
+       btnP.click();
+    } else if(r === "chauffeur") {
+       btnP.style.display = "none";
+       btnC.style.display = "inline-block";
+       btnC.click();
+    } else {
+       btnC.style.display = "inline-block";
+       btnP.style.display = "inline-block";
+    }
+  }
+
   function ouvrirIdent(){
-    if(identite){ $("#identOverlay").hidden = true; return; }
+    if(identite){ $("#identOverlay").hidden = true; appliquerRole(); return; }
     $("#identOverlay").hidden = false;
   }
   $("#identValider").addEventListener("click", ()=>{
     const nom = $("#i-nom").value.trim(), tel = $("#i-tel").value.trim();
+    const roleEl = $("#i-role");
+    const role = roleEl ? roleEl.value : "passager";
     if(!nom){ toast("Indiquez votre nom"); return; }
-    identite = {nom, tel};
-    saveLocal("sengo_identite", identite); $("#identOverlay").hidden = true; if(typeof trajetsChanged === "function") trajetsChanged();
+    identite = {nom, tel, role};
+    saveLocal("sengo_identite", identite); $("#identOverlay").hidden = true; appliquerRole(); if(typeof trajetsChanged === "function") trajetsChanged();
   });
+
   ouvrirIdent();
 
   // ---------- source de donnees : Firestore si configure, sinon localStorage ----------
