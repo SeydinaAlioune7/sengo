@@ -596,6 +596,17 @@ const __minuteur = setInterval(()=>{
     }
   };
 
+  
+  window.annulerPaiement = function() {
+      $("#payOverlay").hidden = true;
+  };
+  $("#btnWave")?.addEventListener("click", () => {
+      if(window._currentPayAction) window._currentPayAction();
+  });
+  $("#btnOrange")?.addEventListener("click", () => {
+      if(window._currentPayAction) window._currentPayAction();
+  });
+
   window.gererPassager = async function(trajetId, passagerId, action) {
     const t = trajets.find(x=>x.id===trajetId);
     if(!t) return;
@@ -737,9 +748,22 @@ const __minuteur = setInterval(()=>{
       const prx = Number(tr.prix)||0;
       const cmm = Math.round(prx * 0.10);
       const tot = (prx + cmm) * nb;
-      const payeMsg = "Pour valider votre place, vous allez devoir payer " + fmt(tot, tr.devise) + ".\n\nCliquez sur OK, puis utilisez Wave ou Orange Money pour envoyer l'argent au chauffeur (" + (tr.phone||"") + ").";
-      if(!confirm(payeMsg)) return;
-      await reserverPlace(id, nb, {nom:identite.nom, tel:identite.tel});
+      
+      // Ouvrir le portail de paiement
+      $("#payPlaces").textContent = nb;
+      $("#payMontant").textContent = fmt(tot, tr.devise);
+      $("#payTel").textContent = tr.phone || "Inconnu";
+      $("#payOverlay").hidden = false;
+      $("#payLoader").style.display = "none";
+      
+      // Assigner l'action de paiement
+      window._currentPayAction = async function() {
+         $("#payLoader").style.display = "block";
+         setTimeout(async () => {
+             await reserverPlace(id, nb, {nom:identite.nom, tel:identite.tel});
+             $("#payOverlay").hidden = true;
+         }, 1500);
+      };
 
       toast("Réservation confirmée !");
       const t = trajets.find(x=>x.id===id);
