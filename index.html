@@ -815,18 +815,23 @@ const __minuteur = setInterval(()=>{
       $("#payLoader").style.display = "none";
       
       // Assigner l'action de paiement
-      window._currentPayAction = async function() {
-         $("#payLoader").style.display = "block";
-         setTimeout(async () => {
-             await reserverPlace(id, nb, {nom:identite.nom, tel:identite.tel});
-             $("#payOverlay").hidden = true;
-         }, 1500);
-      };
-
-      toast("Réservation confirmée !");
-      const t = trajets.find(x=>x.id===id);
-      if(t) ouvrirRecu(t, nb);
-    }catch(err){
+              window._currentPayAction = async function() {
+           $("#payLoader").style.display = "block";
+           setTimeout(async () => {
+               try {
+                   await reserverPlace(id, nb, {nom:identite.nom, tel:identite.tel});
+                   $("#payOverlay").hidden = true;
+                   toast("Réservation confirmée et mise en attente !");
+                   const t = trajets.find(x=>x.id===id);
+                   if(t) ouvrirRecu(t, nb);
+               } catch(err) {
+                   $("#payOverlay").hidden = true;
+                   if(String(err.message).includes("PLUS_ASSEZ")) toast("Désolé, il ne reste plus assez de places");
+                   else toast("Erreur lors de la réservation");
+               }
+           }, 1500);
+        };
+      }catch(err){
       if(String(err.message).includes("PLUS_ASSEZ")) toast("Il ne reste plus assez de places");
       else toast("Erreur, réessayez");
     }
